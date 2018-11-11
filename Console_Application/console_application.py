@@ -1,3 +1,8 @@
+'''
+Some functions were modified from: https://www.kaggle.com/uds5501/cnn-segmentation-resnet-depth-5,
+https://www.kaggle.com/drt2290078/mask-rcnn-sample-starter-code, and 
+https://www.kaggle.com/ashishpatel26/chexnet-batch-normalization-hyparameter-tuning.
+'''
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
@@ -10,6 +15,7 @@ import pydicom
 from generator import Generator
 from skimage import measure
 from skimage.transform import resize
+import csv
 
 def display_title_bar():
     # Clears the terminal screen, and displays a title bar.
@@ -43,16 +49,13 @@ def load_model(model_json, model_h5):
     
     return loaded_model
     
-def resnet_predict(model, test_image_info):
+def model_predict(model, test_image_info):
     filename = test_image_info[1][0]
     preds = model.predict(test_image_info[0])
     pred = resize(preds[0], (1024, 1024), mode='reflect')
-    print(type(pred[0]))
-    print(len(pred[0]))
-    print(pred[0])
     comp = pred[:, :, 0] > 0.5
     comp = measure.label(comp)
-    predictionString = ''
+    prediction_string = ''
     for region in measure.regionprops(comp):
         # retrieve x, y, height and width
         y, x, y2, x2 = region.bbox
@@ -61,12 +64,62 @@ def resnet_predict(model, test_image_info):
         # proxy for confidence score
         conf = np.mean(pred[y:y+height, x:x+width])
         # add to predictionString
-        predictionString += str(conf) + ' ' + str(x) + ' ' + str(y) + ' ' + str(width) + ' ' + str(height) + ' '
+        prediction_string += str(conf) + ' ' + str(x) + ' ' + str(y) + ' ' + str(width) + ' ' + str(height) + ' '          
         # add filename and predictionString to dictionary
         filename = filename.split('.')[0]
         #submission_dict[filename] = predictionString
-    print("prediction_string =" + str(predictionString))
-    return predictionString
+    if (prediction_string == ''):
+        print("No lung opacties found.")
+    else:
+      print("bounding boxes = " + str(prediction_string))
+    return prediction_string
+    
+
+# Make predictions on test images, write out sample submission 
+def mask_rcnn_predict(image_fps, min_conf=0.95):   
+    # assume square image
+    resize_factor = ORIG_SIZE / config.IMAGE_SHAPE[0]
+    #resize_factor = ORIG_SIZE 
+    out_str = ""
+    with open(filepath, 'w') as file:
+        for image_id in tqdm(image_fps): 
+            ds = pydicom.read_file(image_id)
+            image = ds.pixel_array
+            # If grayscale. Convert to RGB for consistency.
+            if len(image.shape) != 3 or image.shape[2] != 3:
+                image = np.stack((image,) * 3, -1) 
+            image, window, scale, padding, crop = utils.resize_image(image, min_dim=config.IMAGE_MIN_DIM, min_scale=config.IMAGE_MIN_SCALE, max_dim=config.IMAGE_MAX_DIM, mode=config.IMAGE_RESIZE_MODE)
+                
+            patient_id = os.path.splitext(os.path.basename(image_id))[0]
+    
+            results = model.detect([image])
+            r = results[0]
+    
+            #out_str = ""
+            out_str += patient_id 
+            out_str += ","
+            assert( len(r['rois']) == len(r['class_ids']) == len(r['scores']) )
+            if len(r['rois']) == 0: 
+                pass
+            else: 
+                num_instances = len(r['rois'])
+      
+                for i in range(num_instances): 
+                    if r['scores'][i] > min_conf: 
+                        out_str += ' '
+                        out_str += str(round(r['scores'][i], 2))
+                        out_str += ' '
+    
+                        # x1, y1, width, height 
+                        x1 = r['rois'][i][1]
+                        y1 = r['rois'][i][0]
+                        width = r['rois'][i][3] - x1 
+                        height = r['rois'][i][2] - y1 
+                        bboxes_str = "{} {} {} {}".format(x1*resize_factor, y1*resize_factor, \
+                                                           width*resize_factor, height*resize_factor)   
+                        out_str += bboxes_str
+
+    return out_str
     
 
 # define iou or jaccard loss function
@@ -80,11 +133,6 @@ def iou_loss(y_true, y_pred):
 # combine bce loss and iou loss
 def iou_bce_loss(y_true, y_pred):
     return 0.4 * keras.losses.binary_crossentropy(y_true, y_pred) + 0.6 * iou_loss(y_true, y_pred)
-
-def evalulate_model(X, Y, loaded_model, loss_type, optimizer_type):
-    loaded_model.compile(loss=loss_type, optimizer=optimzer_type, metrics=['accuracy'])
-    score = loaded_model.evaluate(X, Y, verbose=0)
-    print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1]*100))
   
 def find_patient_dcm_image(patient_id, test_image_directory):
     patient_test_data = []
@@ -93,7 +141,25 @@ def find_patient_dcm_image(patient_id, test_image_directory):
             patient_test_data.append(filename)
         else:
             continue
+    if len(patient_test_data) == 0:
+        print("Unable to find dicom file for that patient.")
     return patient_test_data
+    
+def get_actual_bounding_box(patient_id):
+    ground_truth_bounding_box = []
+    with open('labels.csv', mode='r') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        for row in csv_reader:
+            if (row['patientId'] == patient_id):
+                try:
+                    ground_truth_bounding_box.append(float(row['x']))
+                    ground_truth_bounding_box.append(float(row['y']))
+                    ground_truth_bounding_box.append(float(row['width']))
+                    ground_truth_bounding_box.append(float(row['height']))
+                except ValueError:
+                  print("Pneumonia was not found in this patient. There is no ground truth bounding box.")
+
+    return ground_truth_bounding_box
 
 choice = ''
 display_title_bar()
@@ -105,20 +171,30 @@ while choice != 'q':
     display_title_bar()
     if choice == '1':
         # Load ResNet Model
-        resnet_model = load_model("./model.json", "./model.h5")
+        resnet_model = load_model("./resnet_model.json", "./resnet_model.h5")
         patient_id = get_patient_id()
         patient_test = find_patient_dcm_image(patient_id, "/project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_test_images/")
         test_gen = Generator("/project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_test_images/", patient_test, None, batch_size=20, image_size=256, shuffle=False, predict=True)
-        resnet_predict(resnet_model, test_gen[0])
-        #evaluate_model(resnet_model, X, Y, iou_bce_loss, )
+        model_predict(resnet_model, test_gen[0])
+        gt_bb = get_actual_bounding_box(patient_id)
         pass
     elif choice == '2':
         # Load MaskRCNN
+        mask_rcnn_model = load_model("./mask_rcnn_model.json", "./mask_rcnn_model.h5")
+        patient_id = get_patient_id()
+        patient_test = find_patient_dcm_image(patient_id, "/project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_test_images/")
+        mask_rcnn_predict(patient_test[1][0])
         pass
     elif choice == '3':
         # Load ChexNet
+        chexnet_model = load_model("./chexnet_rcnn_model.json", "./chexnet_rcnn_model.h5")
+        patient_id = get_patient_id()
+        patient_test = find_patient_dcm_image(patient_id, "/project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_test_images/")
+        test_gen = Generator("/project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_test_images/", patient_test, None, batch_size=25, image_size=256, shuffle=False, predict=True)
+        model_predict(chexnet_model, test_gen[0])
+        gt_bb = get_actual_bounding_box(patient_id)
         pass
     elif choice == 'q':
-        print("\nBye.")
+        print("\nExiting.")
     else:
         print("\nI didn't understand that choice.\n")
