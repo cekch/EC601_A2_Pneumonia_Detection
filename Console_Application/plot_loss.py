@@ -48,7 +48,28 @@ def plot_stats():
 		0.7525, 0.7550, 0.7517, 0.7500, 0.7488,
 		0.7488, 0.7467, 0.7455, 0.7438, 0.7422
 		])
-
+	res_acc = np.array([
+		0.9570, 0.9613, 0.9650, 0.9665, 0.9674, 
+		0.9677, 0.9683, 0.9688, 0.9688, 0.9689, 
+		0.9696, 0.9700, 0.9700, 0.9704, 0.9704, 
+		0.9708, 0.9710, 0.9709, 0.9711, 0.9714, 
+		0.9714, 0.9716, 0.9720, 0.9721, 0.9720, 
+		0.9724, 0.9721, 0.9726, 0.9728, 0.9727, 
+		0.9730, 0.9732, 0.9733, 0.9739, 0.9739, 
+		0.9742, 0.9745, 0.9750, 0.9751, 0.9750, 
+		0.9754, 0.9756, 0.9759, 0.9763, 0.9767, 
+		0.9768, 0.9773, 0.9777, 0.9780, 0.9782, 
+		0.9787, 0.9791, 0.9791, 0.9796, 0.9799, 
+		0.9804, 0.9808, 0.9808, 0.9814, 0.9818, 
+		0.9821, 0.9824, 0.9827, 0.9830, 0.9834, 
+		0.9835, 0.9837, 0.9841, 0.9845, 0.9847, 
+		0.9849, 0.9851, 0.9853, 0.9856, 0.9857, 
+		0.9861, 0.9862, 0.9862, 0.9865, 0.9866, 
+		0.9868, 0.9869, 0.9870, 0.9871, 0.9872, 
+		0.9873, 0.9874, 0.9875, 0.9877, 0.9876, 
+		0.9877, 0.9877, 0.9878, 0.9878, 0.9878, 
+		0.9879, 0.9879, 0.9879, 0.9877, 0.9879
+		])
 	mask_training_loss = np.array([
 		2.4847, 1.6430, 1.5727, 1.5188, 1.4498,
 		1.4988, 1.4571, 1.4729, 1.4059, 1.4305,
@@ -138,40 +159,73 @@ def plot_stats():
 		0.1080, 0.1223, 0.1271, 0.1211, 0.1040,
 		0.1198, 0.1024, 0.1130, 0.1034, 0.1183
 		])
+	chex_acc = np.array([
+		0.9726, 0.9732, 0.9734, 0.9736, 0.9738,
+		0.9742, 0.9745, 0.9745, 0.9750, 0.9751,
+		0.9754, 0.9756, 0.9757, 0.9758, 0.9761,
+		0.9762, 0.9764, 0.9766, 0.9766, 0.9766,
+		0.9767, 0.9769, 0.9770, 0.9770, 0.9772,
+		0.9771, 0.9773, 0.9775, 0.9776, 0.9777, 
+		0.9778, 0.9780, 0.9781, 0.9783, 0.9784,
+		0.9785, 0.9788, 0.9790, 0.9795, 0.9797, 
+		0.9800, 0.9804, 0.9809, 0.9812, 0.9819,
+		0.9824, 0.9831, 0.9835, 0.9841, 0.9846, 
+		0.9853, 0.9859, 0.9861, 0.9867, 0.9873, 
+		0.9876, 0.9881, 0.9884, 0.9888, 0.9890, 
+		0.9895, 0.9897, 0.9899, 0.9901, 0.9902, 
+		0.9905, 0.9906, 0.9909, 0.9909, 0.9911,
+		0.9912, 0.9913, 0.9914, 0.9917, 0.9916,
+		0.9919, 0.9919, 0.9919, 0.9921, 0.9920, 
+		0.9921, 0.9923, 0.9923, 0.9923, 0.9923,
+		0.9925, 0.9925, 0.9926, 0.9926, 0.9926,
+		0.9926, 0.9927, 0.9926, 0.9927, 0.9928,
+		0.9929, 0.9927, 0.9929, 0.9929, 0.9931
+		])
 
 	epochs = np.reshape(epochs, (100,))
 	plt.figure()
 
 
-	plt.subplot(3, 2, 1)
+	plt.subplot(3, 3, 1)
 	plt.plot(epochs, res_training_loss, label="ResNet Training Loss", linewidth=2.0)
 	plt.xlabel('Epochs')
 	plt.ylabel('Loss')
 	plt.title('ResNet Training Loss')
-	plt.subplot(3, 2, 2)
+	plt.subplot(3, 3, 2)
 	plt.plot(epochs, res_val_loss, label="ResNet Validation Loss", linewidth=2.0)
 	plt.xlabel('Epochs')
 	plt.ylabel('Val_Loss')
 	plt.title('ResNet Validation Loss')
-	plt.subplot(3, 2, 3)
+	plt.subplot(3, 3, 3)
+	plt.plot(epochs, res_acc, label="ResNet Accuracy", linewidth=2.0)
+	plt.xlabel('Epochs')
+	plt.ylabel('Accuracy')
+	plt.title('ResNet Accuracy')
+	plt.subplot(3, 3, 4)
 	plt.plot(epochs, mask_training_loss, label="Mask-RCNN Training Loss", linewidth=2.0)
 	plt.xlabel('Epochs')
 	plt.ylabel('Loss')
 	plt.title('Mask-RCNN Training Loss')
-	plt.subplot(3, 2, 4)
+	plt.subplot(3, 3, 5)
 	plt.plot(epochs, mask_val_loss, label="Mask-RCNN Validation Loss", linewidth=2.0)
 	plt.xlabel('Epochs')
 	plt.ylabel('Val_Loss')
 	plt.title('Mask-RCNN Validation Loss')
-	plt.subplot(3, 2, 5)
+	plt.subplot(3, 3, 7)
 	plt.plot(epochs, chex_training_loss, label="ChexNet Training Loss", linewidth=2.0)
 	plt.xlabel('Epochs')
 	plt.ylabel('Loss')
 	plt.title('ChexNet Training Loss')
-	plt.subplot(3, 2, 6)
+	plt.subplot(3, 3, 8)
 	plt.plot(epochs, chex_val_loss, label="ChexNet Validation Loss", linewidth=2.0)
 	plt.xlabel('Epochs')
 	plt.ylabel('Val_Loss')
 	plt.title('ChexNet Validation Loss')
+	plt.subplot(3, 3, 9)
+	plt.plot(epochs, chex_acc, label="ChexNet Accuracy", linewidth=2.0)
+	plt.xlabel('Epochs')
+	plt.ylabel('Accuracy')
+	plt.title('ChexNet Accuracy')
 	plt.tight_layout()
 	plt.show()
+plot_stats()
