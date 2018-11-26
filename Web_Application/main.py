@@ -13,8 +13,5 @@ def about():
 def blank():
 	return "Hello, Blank!"
 
-
-
-
 if __name__ == "__main__":
 	app.run(debug=True)
