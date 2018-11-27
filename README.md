@@ -42,6 +42,8 @@ The validation loss curve (validation loss vs epochs) being used for this model 
 
 The preprocessing method is currently being validated and improved to see if that helps to improve the predictions of the ResNet model. Then other hyperparameters will be tuned further to improve performance.
 
+This is the unet model that is currently being looked into, in case a different preprocessing method is needed: https://github.com/theidentity/Unets
+
 ### Mask-RCNN
 The Mask-RCNN model segments certain regions of an image via "masking". These regions would be fed into the CNN for feature extraction and classification. The Mask-RCNN library will be used, and it is included in this github repo for convenience. The model script that Mask-RCNN has is edited for the purpose of this project, so no need to clone from matterport (clone command shown in appendix however). 
 
