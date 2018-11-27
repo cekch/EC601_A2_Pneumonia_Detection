@@ -53,41 +53,10 @@ n_train_samples = len(filenames) - n_valid_samples
 
 print('Total train images:',len(filenames))
 print('Images with pneumonia:', len(pneumonia_locations))
-'''
-ns = [len(value) for value in pneumonia_locations.values()]
-plt.figure()
-plt.hist(ns)
-plt.xlabel('Pneumonia per image')
-plt.xticks(range(1, np.max(ns)+1))
-plt.show()
-
-heatmap = np.zeros((1024, 1024))
-ws = []
-hs = []
-for values in pneumonia_locations.values():
-    for value in values:
-        x, y, w, h = value
-        heatmap[y:y+h, x:x+w] += 1
-        ws.append(w)
-        hs.append(h)
-plt.figure()
-plt.title('Pneumonia location heatmap')
-plt.imshow(heatmap)
-plt.figure()
-plt.title('Pneumonia height lengths')
-plt.hist(hs, bins=np.linspace(0,1000,50))
-plt.show()
-plt.figure()
-plt.title('Pneumonia width lengths')
-plt.hist(ws, bins=np.linspace(0,1000,50))
-plt.show()
-print('Minimum pneumonia height:', np.min(hs))
-print('Minimum pneumonia width: ', np.min(ws))
-'''
 
 class generator(keras.utils.Sequence):
     
-    def __init__(self, folder, filenames, pneumonia_locations=None, batch_size=32, image_size=256, shuffle=True, augment=False, predict=False):
+    def __init__(self, folder, filenames, model, pneumonia_locations=None, batch_size=32, image_size=256, shuffle=True, augment=False, predict=False):
         self.folder = folder
         self.filenames = filenames
         self.pneumonia_locations = pneumonia_locations
@@ -157,6 +126,8 @@ class generator(keras.utils.Sequence):
     def on_epoch_end(self):
         if self.shuffle:
             random.shuffle(self.filenames)
+        #lr = model.optimizer.lr
+        #print("Learning rate:", lr)
         
     def __len__(self):
         if self.predict:
@@ -237,10 +208,10 @@ learning_rate = tf.keras.callbacks.LearningRateScheduler(cosine_annealing)
 
 # create train and validation generators
 folder = './stage_1_train_images/'
-train_gen = generator(folder, train_filenames, pneumonia_locations, batch_size=16, image_size=256, shuffle=True, augment=True, predict=False)
-valid_gen = generator(folder, valid_filenames, pneumonia_locations, batch_size=16, image_size=256, shuffle=False, predict=False)
+train_gen = generator(folder, train_filenames, pneumonia_locations, model, batch_size=16, image_size=256, shuffle=True, augment=True, predict=False)
+valid_gen = generator(folder, valid_filenames, pneumonia_locations, model, batch_size=16, image_size=256, shuffle=False, predict=False)
 
-history = model.fit_generator(train_gen, validation_data=valid_gen, callbacks=[learning_rate], epochs=100, shuffle=True)
+history = model.fit_generator(train_gen, validation_data=valid_gen, callbacks=[learning_rate], 100, shuffle=True)
 
 
 plt.figure(figsize=(12,4))
@@ -305,7 +276,7 @@ sub.columns = ['PredictionString']
 sub.to_csv('submission.csv')
 
 #Save Model
-
+'''
 # serialize model to JSON
 model_json = model.to_json()
 with open("model.json", "w") as json_file:
@@ -313,4 +284,4 @@ with open("model.json", "w") as json_file:
 # serialize weights to HDF5
 model.save_weights("model.h5")
 print("Saved model to disk")
-				
+'''		
