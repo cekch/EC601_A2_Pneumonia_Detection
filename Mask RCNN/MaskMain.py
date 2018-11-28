@@ -380,14 +380,29 @@ augmentation = iaa.SomeOf((0, 1), [
 # In[ ]:
 
 
-NUM_EPOCHS = 100
+NUM_EPOCHS = 10
 #M270, P100, 
 
 # Train Mask-RCNN Model 
 import warnings 
 warnings.filterwarnings("ignore")
+#model.train(dataset_train, dataset_val, 
+#            learning_rate=config.LEARNING_RATE, 
+#            epochs=NUM_EPOCHS, 
+#            layers='all',
+#            augmentation=augmentation)
 model.train(dataset_train, dataset_val, 
-            learning_rate=config.LEARNING_RATE, 
+            learning_rate=0.005, 
+            epochs=1, 
+            layers='heads',
+            augmentation=None)
+model.train(dataset_train, dataset_val, 
+            learning_rate=0.0005, 
+            epochs=1, 
+            layers='all',
+            augmentation=None)
+model.train(dataset_train, dataset_val, 
+            learning_rate=0.00001, 
             epochs=NUM_EPOCHS, 
             layers='all',
             augmentation=augmentation)
@@ -441,6 +456,7 @@ model = modellib.MaskRCNN(mode='inference',
                           config=inference_config,
                           model_dir=ROOT_DIR)
 
+
 # Load trained weights (fill in path to trained weights here)
 assert model_path != "", "Provide path to trained weights"
 print("Loading weights from ", model_path)
@@ -448,7 +464,7 @@ model.load_weights(model_path, by_name=True)
 
 
 # In[ ]:
-
+'''
 
 # set color for class
 def get_colors_for_class_ids(class_ids):
@@ -576,8 +592,8 @@ output.head(100)
 
 
 ## show submission.csv content
-os.chdir(ROOT_DIR)
-get_ipython().system('cat submission.csv')
+#os.chdir(ROOT_DIR)
+#get_ipython().system('cat submission.csv')
 
 
 # In[ ]:
@@ -629,5 +645,6 @@ visualize()
 
 
 # remove files to allow committing (hit files limit otherwise)
-get_ipython().system('rm -rf /kaggle/working/Mask_RCNN')
+#get_ipython().system('rm -rf /kaggle/working/Mask_RCNN')
 
+'''
