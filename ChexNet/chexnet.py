@@ -1,3 +1,6 @@
+#!/bin/bash -l
+import matplotlib
+matplotlib.use('Agg')
 import os
 import csv
 import random
@@ -13,9 +16,10 @@ from tensorflow import keras
 from matplotlib import pyplot as plt
 
 # empty dictionary
-pneumonia_locations = {}
+nodule_locations = {}
 # load table
-with open(os.path.join('./stage_1_train_labels.csv'), mode='r') as infile:
+os.chdir('/')
+with open(os.path.join('/project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_train_labels.csv'), mode='r') as infile:
     # open reader
     reader = csv.reader(infile)
     # skip header
@@ -25,48 +29,88 @@ with open(os.path.join('./stage_1_train_labels.csv'), mode='r') as infile:
         # retrieve information
         filename = rows[0]
         location = rows[1:5]
-        pneumonia = rows[5]
-        # if row contains pneumonia add label to dictionary
-        # which contains a list of pneumonia locations per filename
-        if pneumonia == '1':
+        nodule = rows[5]
+        # if row contains a nodule add label to dictionary
+        # which contains a list of nodule locations per filename
+        if nodule == '1':
             # convert string to float to int
             location = [int(float(i)) for i in location]
-            # save pneumonia location in dictionary
-            if filename in pneumonia_locations:
-                pneumonia_locations[filename].append(location)
+            # save nodule location in dictionary
+            if filename in nodule_locations:
+                nodule_locations[filename].append(location)
             else:
-                pneumonia_locations[filename] = [location]
-				
+                nodule_locations[filename] = [location]
+
 # load and shuffle filenames
-folder = './stage_1_train_images/'
+folder = '/project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_train_images'
 filenames = os.listdir(folder)
 random.shuffle(filenames)
 # split into train and validation filenames
-#n_valid_samples = 2560
-n_valid_samples = 2568
-#train_filenames = filenames[n_valid_samples:]
-train_filenames = filenames[n_valid_samples:]
+n_valid_samples = 2569
+train_filenames = filenames[n_valid_samples:25684]
 valid_filenames = filenames[:n_valid_samples]
 print('n train samples', len(train_filenames))
 print('n valid samples', len(valid_filenames))
 n_train_samples = len(filenames) - n_valid_samples
 
 print('Total train images:',len(filenames))
-print('Images with pneumonia:', len(pneumonia_locations))
+print('Images with nodule:', len(nodule_locations))
+
+ns = [len(value) for value in nodule_locations.values()]
+plt.figure()
+plt.hist(ns)
+plt.xlabel('Nodules per image')
+plt.xticks(range(1, np.max(ns)+1))
+plt.show()
+
+heatmap = np.zeros((1024, 1024))
+ws = []
+hs = []
+for values in nodule_locations.values():
+    for value in values:
+        x, y, w, h = value
+        heatmap[y:y+h, x:x+w] += 1
+        ws.append(w)
+        hs.append(h)
+plt.figure()
+plt.title('Nodule location heatmap')
+plt.imshow(heatmap)
+plt.figure()
+plt.title('Nodule height lengths')
+plt.hist(hs, bins=np.linspace(0,1000,50))
+plt.show()
+plt.figure()
+plt.title('Nodule width lengths')
+plt.hist(ws, bins=np.linspace(0,1000,50))
+plt.show()
+print('Minimum nodule height:', np.min(hs))
+print('Minimum nodule width: ', np.min(ws))
+
+from sklearn.cluster import KMeans
+kmeans = KMeans(n_clusters=2).fit(np.array([ws, hs]).T)
+centers = kmeans.cluster_centers_
+plt.figure()
+plt.scatter(ws, hs, marker='.')
+plt.xlabel('width')
+plt.ylabel('height')
+for center in centers:
+    print(center)
+    plt.scatter(center[0], center[1], c='red')
+plt.show()
 
 class generator(keras.utils.Sequence):
-    
-    def __init__(self, folder, filenames, model, pneumonia_locations=None, batch_size=32, image_size=256, shuffle=True, augment=False, predict=False):
+
+    def __init__(self, folder, filenames, nodule_locations=None, batch_size=32, image_size=512, shuffle=True, predict=False, augment = False):
         self.folder = folder
         self.filenames = filenames
-        self.pneumonia_locations = pneumonia_locations
+        self.nodule_locations = nodule_locations
         self.batch_size = batch_size
         self.image_size = image_size
-        self.shuffle = shuffle
         self.augment = augment
+        self.shuffle = shuffle
         self.predict = predict
         self.on_epoch_end()
-        
+
     def __load__(self, filename):
         # load dicom file as numpy array
         img = pydicom.dcmread(os.path.join(self.folder, filename)).pixel_array
@@ -74,25 +118,25 @@ class generator(keras.utils.Sequence):
         msk = np.zeros(img.shape)
         # get filename without extension
         filename = filename.split('.')[0]
-        # if image contains pneumonia
-        if filename in pneumonia_locations:
-            # loop through pneumonia
-            for location in pneumonia_locations[filename]:
-                # add 1's at the location of the pneumonia
+        # if image contains nodules
+        if filename in nodule_locations:
+            # loop through nodules
+            for location in nodule_locations[filename]:
+                # add 1's at the location of the nodule
                 x, y, w, h = location
                 msk[y:y+h, x:x+w] = 1
+        # resize both image and mask
+        img = resize(img, (self.image_size, self.image_size), mode='reflect')
+        msk = resize(msk, (self.image_size, self.image_size), mode='reflect') > 0.5
         # if augment then horizontal flip half the time
         if self.augment and random.random() > 0.5:
             img = np.fliplr(img)
             msk = np.fliplr(msk)
-        # resize both image and mask
-        img = resize(img, (self.image_size, self.image_size), mode='reflect')
-        msk = resize(msk, (self.image_size, self.image_size), mode='reflect') > 0.45
         # add trailing channel dimension
         img = np.expand_dims(img, -1)
         msk = np.expand_dims(msk, -1)
         return img, msk
-    
+
     def __loadpredict__(self, filename):
         # load dicom file as numpy array
         img = pydicom.dcmread(os.path.join(self.folder, filename)).pixel_array
@@ -101,7 +145,7 @@ class generator(keras.utils.Sequence):
         # add trailing channel dimension
         img = np.expand_dims(img, -1)
         return img
-        
+
     def __getitem__(self, index):
         # select batch
         filenames = self.filenames[index*self.batch_size:(index+1)*self.batch_size]
@@ -122,13 +166,11 @@ class generator(keras.utils.Sequence):
             imgs = np.array(imgs)
             msks = np.array(msks)
             return imgs, msks
-        
+
     def on_epoch_end(self):
         if self.shuffle:
             random.shuffle(self.filenames)
-        #lr = model.optimizer.lr
-        #print("Learning rate:", lr)
-        
+
     def __len__(self):
         if self.predict:
             # return everything
@@ -136,25 +178,24 @@ class generator(keras.utils.Sequence):
         else:
             # return full batches only
             return int(len(self.filenames) / self.batch_size)
-			
 
 def create_downsample(channels, inputs):
-    x = keras.layers.BatchNormalization(momentum=0.99999)(inputs)
+    x = keras.layers.BatchNormalization()(inputs)
     x = keras.layers.LeakyReLU(0)(x)
     x = keras.layers.Conv2D(channels, 1, padding='same', use_bias=False)(x)
-    x = keras.layers.MaxPool2D((2, 2))(x)
+    x = keras.layers.MaxPool2D(2)(x)
     return x
-	
+
 def create_resblock(channels, inputs):
-    x = keras.layers.BatchNormalization(momentum=0.9999)(inputs)
+    x = keras.layers.BatchNormalization()(inputs)
     x = keras.layers.LeakyReLU(0)(x)
     x = keras.layers.Conv2D(channels, 3, padding='same', use_bias=False)(x)
-    x = keras.layers.BatchNormalization(momentum=0.9999)(x)
+    x = keras.layers.BatchNormalization()(x)
     x = keras.layers.LeakyReLU(0)(x)
     x = keras.layers.Conv2D(channels, 3, padding='same', use_bias=False)(x)
     return keras.layers.add([x, inputs])
 
-def create_network(input_size, channels, n_blocks=2, depth=4):
+def create_network(input_size, channels, n_blocks=2, depth=5):
     # input
     inputs = keras.Input(shape=(input_size, input_size, 1))
     x = keras.layers.Conv2D(channels, 3, padding='same', use_bias=False)(inputs)
@@ -165,25 +206,12 @@ def create_network(input_size, channels, n_blocks=2, depth=4):
         for b in range(n_blocks):
             x = create_resblock(channels, x)
     # output
-    x = keras.layers.BatchNormalization(momentum=0.9999)(x)
+    x = keras.layers.BatchNormalization()(x)
     x = keras.layers.LeakyReLU(0)(x)
     x = keras.layers.Conv2D(1, 1, activation='sigmoid')(x)
     outputs = keras.layers.UpSampling2D(2**depth)(x)
     model = keras.Model(inputs=inputs, outputs=outputs)
     return model
-	
-	
-# define iou or jaccard loss function
-def iou_loss(y_true, y_pred):
-    y_true = tf.reshape(y_true, [-1])
-    y_pred = tf.reshape(y_pred, [-1])
-    intersection = tf.reduce_sum(y_true * y_pred)
-    score = (intersection + 1.) / (tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) - intersection + 1.)
-    return 1 - score
-
-# combine bce loss and iou loss
-def iou_bce_loss(y_true, y_pred):
-    return 0.4 * keras.losses.binary_crossentropy(y_true, y_pred) + 0.6 * iou_loss(y_true, y_pred)
 
 # mean iou as a metric
 def mean_iou(y_true, y_pred):
@@ -195,24 +223,22 @@ def mean_iou(y_true, y_pred):
 
 # create network and compiler
 model = create_network(input_size=256, channels=32, n_blocks=2, depth=4)
-model.compile(optimizer='adam',
-              loss=iou_bce_loss,
-              metrics=['accuracy', mean_iou])
-
-# cosine learning rate annealing
-def cosine_annealing(x):
-    lr = 0.01
-    epochs = 100
-    return lr*(np.cos(np.pi*x/epochs)+1.)/2
-learning_rate = tf.keras.callbacks.LearningRateScheduler(cosine_annealing)
+model.compile(optimizer=keras.optimizers.Adam(lr=.01),loss=keras.losses.binary_crossentropy,metrics=['accuracy', mean_iou])
 
 # create train and validation generators
-folder = './stage_1_train_images/'
-train_gen = generator(folder, train_filenames, pneumonia_locations, model, batch_size=16, image_size=256, shuffle=True, augment=True, predict=False)
-valid_gen = generator(folder, valid_filenames, pneumonia_locations, model, batch_size=16, image_size=256, shuffle=False, predict=False)
+folder = '../project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_train_images'
+train_gen = generator(folder, train_filenames, nodule_locations, batch_size=32, image_size=256, shuffle=True, augment=True, predict=False)
+valid_gen = generator(folder, valid_filenames, nodule_locations, batch_size=32, image_size=256, shuffle=False, predict=False)
 
-history = model.fit_generator(train_gen, validation_data=valid_gen, callbacks=[learning_rate], 100, shuffle=True)
-
+history = model.fit_generator(train_gen, validation_data=valid_gen, epochs=100, shuffle=True, verbose=1)
+os.chdir('/usr3/graduate/sarthak')
+model_json = model.to_json()
+with open("model.json", "w") as json_file:
+    json_file.write(model_json)
+# serialize weights to HDF5
+model.save_weights("model.h5")
+print("Saved model to disk")
+#model.save("model.h5")
 
 plt.figure(figsize=(12,4))
 plt.subplot(131)
@@ -229,13 +255,14 @@ plt.plot(history.epoch, history.history["val_mean_iou"], label="Valid iou")
 plt.legend()
 plt.show()
 
+os.chdir('/')
 # load and shuffle filenames
-folder = './stage_1_test_images/'
+folder = '/project/ece601/A2_Pneumonia_Detection/Dataset/stage_1_test_images'
 test_filenames = os.listdir(folder)
 print('n test samples:', len(test_filenames))
 
 # create test generator with predict flag set to True
-test_gen = generator(folder, test_filenames, None, batch_size=20, image_size=256, shuffle=False, predict=True)
+test_gen = generator(folder, test_filenames, None, batch_size=25, image_size=256, shuffle=False, predict=True)
 
 # create submission dictionary
 submission_dict = {}
@@ -273,15 +300,5 @@ for imgs, filenames in test_gen:
 sub = pd.DataFrame.from_dict(submission_dict,orient='index')
 sub.index.names = ['patientId']
 sub.columns = ['PredictionString']
-sub.to_csv('submission.csv')
-
-#Save Model
-'''
-# serialize model to JSON
-model_json = model.to_json()
-with open("model.json", "w") as json_file:
-    json_file.write(model_json)
-# serialize weights to HDF5
-model.save_weights("model.h5")
-print("Saved model to disk")
-'''		
+os.chdir('/usr3/graduate/sarthak')
+sub.to_csv('submission_chexnet.csv')
