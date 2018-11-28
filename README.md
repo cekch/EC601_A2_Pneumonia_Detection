@@ -63,7 +63,24 @@ python MaskMain.py
 The entire training process takes appromixately 2 hours. Please specify the DATA_DIR filepath with the dataset lies, and multiple h5 files (representing training weights) will be outputted into the ROOT_DIR filepath. The script will also create a new "testing" model, load the latest weights to the model, and predict pneumonia bounding boxes for the 1000 test images (results in submission.csv).
 
 ### ChexNet
--Insert description-
+The ChexNet model is trained on the entire dataset of roughly 26000 dicom files over 100 epochs. It shares the segmentation technique as described in ResNet.
+
+Before training the model, GPUs on the SCC were requested through the following request:
+```
+qrsh -P ece601 -l gpus=1 -l gpu_c=6
+```
+After the gpu access has been granted, the following modules were loaded in the following order 
+```
+module load python/3.6.2
+module load tensorflow/r1.10
+```
+
+Then the script can be run through:
+```
+python chexnet.py
+```
+
+The model takes about 13 hours to train and outputs a file submission_chexnet.csv, that contains the predicted results of the given 1000 test images. The script also saves the model and its weights as model.json and model.h5 correspondingly.
 
 ## Applications
 Two applications were made for this project, a console app and a web app.
