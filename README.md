@@ -96,8 +96,6 @@ This will need to a requested input for selecting an option (predict a test imag
 The web app is currently in process, but is using Flask and Google Cloud Platform (GCP). A tutorial is followed [here](https://medium.freecodecamp.org/how-to-build-a-web-application-using-flask-and-deploy-it-to-the-cloud-3551c985e492) and the progress is shown [here](https://united-aviary-223117.appspot.com/).
 
 ### API
-Working on implementing an API for the project. Reference [Link](https://towardsdatascience.com/deploying-a-machine-learning-model-as-a-rest-api-4a03b865c166)[Link]
-
- 
+Working on implementing an API for the project. Reference [Link](https://towardsdatascience.com/deploying-a-machine-learning-model-as-a-rest-api-4a03b865c166)
 
 
