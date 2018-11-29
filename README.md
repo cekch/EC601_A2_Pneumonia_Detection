@@ -67,7 +67,7 @@ The ChexNet model is trained on the entire dataset of roughly 26000 dicom files 
 
 Before training the model, GPUs on the SCC were requested through the following request:
 ```
-qrsh -P ece601 -l gpus=1 -l gpu_c=6
+qrsh -P ece601 -l gpus=1 -l gpu_c=6 -l h_rt=24:00:00
 ```
 After the gpu access has been granted, the following modules were loaded in the following order 
 ```
