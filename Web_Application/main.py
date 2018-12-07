@@ -5,13 +5,17 @@ import numpy as np
 from PIL import Image
 import pylab
 import matplotlib.pyplot as plt
-#import base64
-#import plot_bounding_boxes
+import draw_bounding_boxes as draw_bb
 app = Flask(__name__)
 
 @app.route("/")
 def home():
 	return render_template("home.html")
+	
+@app.route("/patient_plot")
+def display_bbox(x, y, width, height, im):
+    box = [x,y,width,height]
+    draw_bb.draw_bounding_boxes(box, im) 
 
 @app.route("/about")
 def about():
@@ -37,33 +41,6 @@ def upload_file2():
 		#return 'file uploaded successfully'
         return render_template('patient_plot.html', name = 'patient plot', url = '/static/images/patient_plot.png')
 
-def overlay_box(im, box, rgb, stroke=1):
-    """
-    Method to overlay single box on image
-    """
-    # --- Convert coordinates to integers
-    box = [int(float(b)) for b in box]
-
-    # --- Extract coordinates
-    y1, x1, height, width = box
-    y2 = y1 + height
-    x2 = x1 + width
-
-    im[y1:y1 + stroke, x1:x2] = rgb
-    im[y2:y2 + stroke, x1:x2] = rgb
-    im[y1:y2, x1:x1 + stroke] = rgb
-    im[y1:y2, x2:x2 + stroke] = rgb
-
-    return im
-	
-@app.route("/patient_plot")
-def display_bbox(x, y, width, height, im):
-    rgb = np.array([255,0,0]).astype('int')
-    box = [x,y,width,height]
-    im = overlay_box(im=im, box=box, rgb=rgb, stroke=6)
-    plt.imshow(im, cmap=pylab.cm.gist_gray)
-    #plt.show()
-    plt.imsave('./static/images/patient_plot.png', im)
 
 @app.route("/blank")
 def blank():
