@@ -68,7 +68,7 @@ def upload_file2():
 					ymin = pred_list[i+2]
 					wid = pred_list[i+3]
 					ht = pred_list[i+4]
-					box = [xmin,ymin,wid,ht]
+					box = [conf,xmin,ymin,wid,ht]
 					predboxes.append(box)
 					i=i+5
 					num_boxes=num_boxes-1

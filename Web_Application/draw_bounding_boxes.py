@@ -3,13 +3,17 @@ import numpy as np
 from PIL import Image
 import pylab
 import matplotlib.pyplot as plt
+from PIL import ImageFont
+from PIL import ImageDraw
 
 def overlay_box(im, box, rgb, stroke=1):
     """
     Method to overlay single box on image
+
     """
     # --- Convert coordinates to integers
-    box = [int(float(b)) for b in box]
+    conf = box[0]
+    box = [int(float(b)) for b in box[1:]]
 
     # --- Extract coordinates
     y1, x1, height, width = box
@@ -20,7 +24,20 @@ def overlay_box(im, box, rgb, stroke=1):
     im[y2:y2 + stroke, x1:x2] = rgb
     im[y1:y2, x1:x1 + stroke] = rgb
     im[y1:y2, x2:x2 + stroke] = rgb
+
+    pilimg = Image.fromarray(im)
+    draw = ImageDraw.Draw(pilimg)
+    font = ImageFont.truetype('Roboto-Bold.ttf', size=45)
+    (x, y) = ((x1+x2)/2, y1-46)
+    message = "conf: "+str(conf)[:5]
+    color = 'rgb(255, 255, 0)' # black color
+    draw.text((x, y), message, fill=color, font=font)
+    # im = np.array(draw)
+
+    im = np.array(pilimg)
+
     return im
+
 
 # def draw_bounding_boxes(pred_string, im, patient_id):
 #     pred_list = pred_string.split()
