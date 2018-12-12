@@ -10,7 +10,7 @@ import draw_bounding_boxes as draw_bb
 import load_and_predict as lp
 app = Flask(__name__)
 
-#resnet_model = lp.load_machine_learning_model("./model_files/resnet_model.json", "./model_files/resnet_model.h5", '1')
+resnet_model = lp.load_machine_learning_model("./model_files/resnet_model.json", "./model_files/resnet_model.h5", '1')
 mask_rcnn_model = lp.load_machine_learning_model("", "./model_files/mask_rcnn_model.h5", '2')
 chexnet_model = lp.load_machine_learning_model("./model_files/chexnet_model.json", "./model_files/chexnet_model.h5", '3')
 global graph

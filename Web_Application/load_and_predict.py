@@ -64,7 +64,7 @@ def load_machine_learning_model(model_json, model_h5, model_type):
         loaded_model = modellib.MaskRCNN(mode='inference', config=inference_config, model_dir=ROOT_DIR)
         loaded_model.load_weights(model_h5, by_name=True)
 
-    print("Loaded model from disk")
+    print("Loaded ",model_type ," model from disk")
 
     return loaded_model
 
