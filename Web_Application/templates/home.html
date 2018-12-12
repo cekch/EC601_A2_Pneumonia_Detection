@@ -1,22 +1,16 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
   <head>
-    <style>
-    body{
-      background-color: #d9d9d9;
-    }
-
-
-
     <meta charset="utf-8">
-    <title>Pneumonia Detector</title>
-    </style>
+    <title>Home</title>
+    <!-- <link rel="stylesheet" href="{{ url_for('static',     filename='css/template.css') }}"> -->
   </head>
   <body>
     {% extends "template.html" %}
     {% block content %}
-    <h1><center> Pneumonia Detector v1.0 </center></h1>
-    <p><center> Detect and locate Pneumonia on a CXR</center></p>
+    <h1>Home</h1>
+    <p> Welcome to the Pneumonia Detection Web App! </p>
+    <p> We are currently using the ResNet model to detect pneumonia in CXRs. </p>    
     {% endblock %}
   </body>
 </html>

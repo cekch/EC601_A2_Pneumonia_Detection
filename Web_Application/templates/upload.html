@@ -2,13 +2,16 @@
    <head>
    	  <meta charset="utf-8">
    	  <title> Test CXR Images </title>
+        <link rel="stylesheet" href="{{ url_for('static',     filename='css/template.css') }}">
    <body>
-   	  <h1 align="center"> Upload a chest radiograph file </h1>
-      <center><form action = "http://localhost:5000/uploader" method = "POST"
+      {% extends "template.html" %}
+      {% block content %}
+   	<h1> Upload a chest radiograph file </h1>
+      <form action = "http://localhost:5000/uploader" method = "POST" 
          enctype = "multipart/form-data">
          <input type = "file" name = "file" />
          <input type = "submit"/>
       </form>
-    </center>
+      {% endblock %}
    </body>
 </html>

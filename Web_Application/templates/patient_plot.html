@@ -1,3 +1,12 @@
-<p><center>{{ name }}</center></p>
-
-<center><img src={{ url }} alt="Patient Plot" height="512" width="512"></center>
+<html>
+   <head>
+   	  <meta charset="utf-8">
+   	  <title> Test CXR Images </title>
+        <link rel="stylesheet" href="{{ url_for('static',     filename='css/template.css') }}">
+   <body>
+      {% extends "template.html" %}
+      {% block content %}
+   	  <img src={{ url }} alt="Patient Plot" height="512" width="512">
+      {% endblock %}
+   </body>
+</html>
