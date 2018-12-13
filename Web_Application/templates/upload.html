@@ -6,7 +6,7 @@
    <body>
       {% extends "template.html" %}
       {% block content %}
-   	<h1> Upload a chest radiograph file </h1>
+   	<h2> Please upload a DICOM file of a Chest X-Ray (CXR) </h1>
       <form action = "http://localhost:5000/uploader" method = "POST" 
          enctype = "multipart/form-data">
          <input type = "file" name = "file" />

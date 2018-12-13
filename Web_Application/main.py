@@ -11,11 +11,22 @@ import load_and_predict as lp
 app = Flask(__name__)
 
 resnet_model = lp.load_machine_learning_model("./model_files/resnet_model.json", "./model_files/resnet_model.h5", '1')
-mask_rcnn_model = lp.load_machine_learning_model("", "./model_files/mask_rcnn_model.h5", '2')
-chexnet_model = lp.load_machine_learning_model("./model_files/chexnet_model.json", "./model_files/chexnet_model.h5", '3')
+#mask_rcnn_model = lp.load_machine_learning_model("", "./model_files/mask_rcnn_model.h5", '2')
+#chexnet_model = lp.load_machine_learning_model("./model_files/chexnet_model.json", "./model_files/chexnet_model.h5", '3')
 global graph
 graph = tf.get_default_graph()
 
+@app.after_request
+def add_header(r):
+    """
+    Add headers to both force latest IE rendering engine or Chrome Frame,
+    and also to cache the rendered page for 10 minutes.
+    """
+    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    r.headers['Cache-Control'] = 'public, max-age=0'
+    return r
 
 @app.route("/")
 def home():
@@ -48,12 +59,12 @@ def upload_file2():
 		testgen = lp.test_gen(files)
 		preds = []
 		with graph.as_default():
-			#pred_string1 = lp.model_predict(resnet_model, testgen[0])
-			pred_string2 = lp.mask_rcnn_predict(mask_rcnn_model, "./" + f.filename, patient_id)
-			pred_string3 = lp.model_predict(chexnet_model, testgen[0])
-			#preds.append(pred_string1)
-			preds.append(pred_string2)
-			preds.append(pred_string3)
+			pred_string1 = lp.model_predict(resnet_model, testgen[0])
+			#pred_string2 = lp.mask_rcnn_predict(mask_rcnn_model, "./" + f.filename, patient_id)
+			#pred_string3 = lp.model_predict(chexnet_model, testgen[0])
+			preds.append(pred_string1)
+			#preds.append(pred_string2)
+			#preds.append(pred_string3)
 
 		predboxes=[]
 		for pred in preds:
@@ -68,7 +79,7 @@ def upload_file2():
 					ymin = pred_list[i+2]
 					wid = pred_list[i+3]
 					ht = pred_list[i+4]
-					box = [conf,xmin,ymin,wid,ht]
+					box = [conf, xmin,ymin,wid,ht]
 					predboxes.append(box)
 					i=i+5
 					num_boxes=num_boxes-1
@@ -83,7 +94,17 @@ def upload_file2():
 		# width = 65
 		# height = 188
 		#return 'file uploaded successfully'
-	return render_template('patient_plot.html', name = 'patient plot', url = pic_name)
+	if len(predboxes) == 0:
+		return render_template('patient_plot.html', result = "No signs of pneumonia found in this patient.", url = pic_name)
+	else:
+		if len(predboxes) == 1:
+			result_string = "Pneumonia was found at 1 location in this patient."
+		else:
+			result_string = "Pneumonia was found at %d different locations in this patient." % len(predboxes)
+		return render_template('patient_plot.html', result = result_string, url = pic_name)
+
+
+
 
 @app.route("/blank")
 def blank():

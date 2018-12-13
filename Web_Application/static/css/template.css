@@ -85,6 +85,14 @@ p {
   margin-right: 30px;
   margin-left: 30px;
 }
+form {
+  margin-right: 30px;
+  margin-left: 30px;
+}
+img {
+  margin-right: 30px;
+  margin-left: 30px;
+}
 .menu {
   float: right;
   margin-top: 8px;
