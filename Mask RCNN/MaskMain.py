@@ -19,7 +19,7 @@
 # *Copyright 2018 MD.ai, Inc.   
 # Licensed under the Apache License, Version 2.0*
 
-# In[ ]:
+# In[69]:
 
 
 import os 
@@ -34,25 +34,29 @@ import pydicom
 from imgaug import augmenters as iaa
 from tqdm import tqdm
 import pandas as pd 
-import glob
+import glob 
 import tensorflow as tf
 
-def get_n_cores():
-  nslots = os.getenv('NSLOTS')
-  if nslots is not None:
-    return int(nslots)
-  raise ValueError('Environment variable NSLOTS is not defined.')
+
+# In[70]:
+
+
+# def get_n_cores():
+#   nslots = os.getenv('NSLOTS')
+#   if nslots is not None:
+#     return int(nslots)
+#   raise ValueError('Environment variable NSLOTS is not defined.')
   
-session_conf = tf.ConfigProto(
-      intra_op_parallelism_threads=get_n_cores()-1,
-      inter_op_parallelism_threads=1,
-      allow_soft_placement=True, 
-      log_device_placement=True)
+# session_conf = tf.ConfigProto(
+#       intra_op_parallelism_threads=get_n_cores()-1,
+#       inter_op_parallelism_threads=1,
+#       allow_soft_placement=True, 
+#       log_device_placement=True)
 
 
 # ### First: Install Kaggle API for download competition data.
 
-# In[ ]:
+# In[71]:
 
 
 DATA_DIR = '/project/ece601/A2_Pneumonia_Detection/Dataset/'
@@ -82,9 +86,7 @@ ROOT_DIR = '/project/ece601/A2_Pneumonia_Detection_MaskRCNN/'
 # ### Install Matterport's Mask-RCNN model from github.
 # See the [Matterport's implementation of Mask-RCNN](https://github.com/matterport/Mask_RCNN).
 
-
-os.chdir('Mask_RCNN')
-#!python setup.py -q install
+# In[72]:
 
 
 # Import Mask RCNN
@@ -96,7 +98,7 @@ from mrcnn import visualize
 from mrcnn.model import log
 
 
-# In[ ]:
+# In[73]:
 
 
 train_dicom_dir = os.path.join(DATA_DIR, 'stage_1_train_images')
@@ -109,7 +111,7 @@ test_dicom_dir = os.path.join(DATA_DIR, 'stage_1_test_images')
 # - image_annotions is a dictionary of the annotations keyed by the filenames
 # - parsing the dataset returns a list of the image filenames and the annotations dictionary
 
-# In[ ]:
+# In[74]:
 
 
 def get_dicom_fps(dicom_dir):
@@ -125,7 +127,7 @@ def parse_dataset(dicom_dir, anns):
     return image_fps, image_annotations 
 
 
-# In[ ]:
+# In[75]:
 
 
 # The following parameters have been selected to reduce running time for demonstration purposes 
@@ -142,7 +144,7 @@ class DetectorConfig(Config):
     # Train on 1 GPU and 8 images per GPU. We can put multiple images on each
     # GPU because the images are small. Batch size is 8 (GPUs * images/GPU).
     GPU_COUNT = 1
-    IMAGES_PER_GPU = 8 
+    IMAGES_PER_GPU = 8
     
     BACKBONE = 'resnet50'
     
@@ -154,7 +156,7 @@ class DetectorConfig(Config):
     TRAIN_ROIS_PER_IMAGE = 32
     MAX_GT_INSTANCES = 3
     DETECTION_MAX_INSTANCES = 3
-    DETECTION_MIN_CONFIDENCE = 0.9
+    DETECTION_MIN_CONFIDENCE = 0.7
     DETECTION_NMS_THRESHOLD = 0.1
 
     STEPS_PER_EPOCH = 100
@@ -163,7 +165,7 @@ config = DetectorConfig()
 config.display()
 
 
-# In[ ]:
+# In[76]:
 
 
 class DetectorDataset(utils.Dataset):
@@ -175,7 +177,7 @@ class DetectorDataset(utils.Dataset):
         
         # Add classes
         self.add_class('pneumonia', 1, 'Lung Opacity')
-   
+        
         # add images 
         for i, fp in enumerate(image_fps):
             annotations = image_annotations[fp]
@@ -221,7 +223,7 @@ class DetectorDataset(utils.Dataset):
 
 # ### Examine the annotation data, parse the dataset, and view dicom fields
 
-# In[ ]:
+# In[77]:
 
 
 # training dataset
@@ -229,27 +231,27 @@ anns = pd.read_csv(os.path.join(DATA_DIR, 'stage_1_train_labels.csv'))
 anns.head()
 
 
-# In[ ]:
+# In[78]:
 
 
 image_fps, image_annotations = parse_dataset(train_dicom_dir, anns=anns)
 
 
-# In[ ]:
+# In[79]:
 
 
 ds = pydicom.read_file(image_fps[0]) # read dicom image from filepath 
 image = ds.pixel_array # get image array
 
 
-# In[ ]:
+# In[80]:
 
 
 # show dicom fields 
 ds
 
 
-# In[ ]:
+# In[81]:
 
 
 # Original DICOM image size: 1024 x 1024
@@ -257,38 +259,25 @@ ORIG_SIZE = 1024
 
 
 # ### Split the data into training and validation datasets
-# **Note: We have only used only a portion of the images for demonstration purposes. See comments below.**
-#  
-#  - To use all the images do: image_fps_list = list(image_fps)
-#  - Or change the number of images from 100 to a custom number
 
-# In[ ]:
+# In[82]:
 
-
-######################################################################
-# Modify this line to use more or fewer images for training/validation. 
-# To use all images, do: image_fps_list = list(image_fps)
-image_fps_list = list(image_fps) 
-#####################################################################
 
 # split dataset into training vs. validation dataset 
-# split ratio is set to 0.9 vs. 0.1 (train vs. validation, respectively)
-sorted(image_fps_list)
+image_fps_list = list(image_fps)
 random.seed(42)
 random.shuffle(image_fps_list)
 
-validation_split = (1/10)
-split_index = int((1 - validation_split) * len(image_fps_list))
-
-image_fps_train = image_fps_list[:split_index]
-image_fps_val = image_fps_list[split_index:]
+val_size = 1500
+image_fps_val = image_fps_list[:val_size]
+image_fps_train = image_fps_list[val_size:]
 
 print(len(image_fps_train), len(image_fps_val))
 
 
 # ### Create and prepare the training dataset using the DetectorDataset class.
 
-# In[ ]:
+# In[83]:
 
 
 # prepare the training dataset
@@ -298,7 +287,7 @@ dataset_train.prepare()
 
 # ### Let's look at a sample annotation. We see a bounding box with (x, y) of the the top left corner as well as the width and height.
 
-# In[ ]:
+# In[84]:
 
 
 # Show annotation(s) for a DICOM image 
@@ -306,7 +295,7 @@ test_fp = random.choice(image_fps_train)
 image_annotations[test_fp]
 
 
-# In[ ]:
+# In[85]:
 
 
 # prepare the validation dataset
@@ -316,22 +305,23 @@ dataset_val.prepare()
 
 # ### Display a random image with bounding boxes
 
-# In[ ]:
+# In[86]:
 
 
-# Load and display random samples and their bounding boxes
-# Suggestion: Run this a few times to see different examples. 
+# Load and display random sample and their bounding boxes
 
-image_id = random.choice(dataset_train.image_ids)
-image_fp = dataset_train.image_reference(image_id)
-image = dataset_train.load_image(image_id)
-mask, class_ids = dataset_train.load_mask(image_id)
+class_ids = [0]
+while class_ids[0] == 0:  ## look for a mask
+    image_id = random.choice(dataset_train.image_ids)
+    image_fp = dataset_train.image_reference(image_id)
+    image = dataset_train.load_image(image_id)
+    mask, class_ids = dataset_train.load_mask(image_id)
 
 print(image.shape)
 
 plt.figure(figsize=(10, 10))
 plt.subplot(1, 2, 1)
-plt.imshow(image[:, :, 0], cmap='gray')
+plt.imshow(image)
 plt.axis('off')
 
 plt.subplot(1, 2, 2)
@@ -345,28 +335,36 @@ print(image_fp)
 print(class_ids)
 
 
-# In[ ]:
-
-
-model = modellib.MaskRCNN(mode='training', config=config, model_dir=ROOT_DIR)
-
-
 # ### Image Augmentation. Try finetuning some variables to custom values
 
-# In[ ]:
+# In[87]:
 
 
-# Image augmentation 
-augmentation = iaa.SomeOf((0, 1), [
-    iaa.Fliplr(0.5),
-    iaa.Affine(
-        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-        translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
-        rotate=(-25, 25),
-        shear=(-8, 8)
-    ),
-    iaa.Multiply((0.9, 1.1))
+# Image augmentation (light but constant)
+augmentation = iaa.Sequential([
+    iaa.OneOf([ ## geometric transform
+        iaa.Affine(
+            scale={"x": (0.98, 1.04), "y": (0.98, 1.04)},
+            translate_percent={"x": (-0.03, 0.03), "y": (-0.05, 0.05)},
+            rotate=(-5, 5),
+            shear=(-3, 3),
+        ),
+        iaa.PiecewiseAffine(scale=(0.002, 0.03)),
+    ]),
+    iaa.OneOf([ ## brightness or contrast
+        iaa.Multiply((0.85, 1.15)),
+        iaa.ContrastNormalization((0.85, 1.15)),
+    ]),
+    iaa.OneOf([ ## blur or sharpen
+        iaa.GaussianBlur(sigma=(0.0, 0.12)),
+        iaa.Sharpen(alpha=(0.0, 0.12)),
+    ]),
 ])
+
+# test on the same image as above
+imggrid = augmentation.draw_grid(image[:, :, 0], cols=5, rows=2)
+plt.figure(figsize=(30, 12))
+_ = plt.imshow(imggrid[:, :, 0], cmap='gray')
 
 
 # ### Now it's time to train the model. Note that training even a basic model can take a few hours. 
@@ -377,38 +375,71 @@ augmentation = iaa.SomeOf((0, 1), [
 # - DetectorDataset loads images from image filenames and  masks from the annotation data
 # - model is Mask-RCNN
 
-# In[ ]:
+# In[88]:
 
 
-NUM_EPOCHS = 10
-#M270, P100, 
+model = modellib.MaskRCNN(mode='training', config=config, model_dir=ROOT_DIR)
+
+
+# In[89]:
+
+
+NUM_EPOCHS = 100
+LEARNING_RATE = 0.004
 
 # Train Mask-RCNN Model 
 import warnings 
 warnings.filterwarnings("ignore")
-#model.train(dataset_train, dataset_val, 
-#            learning_rate=config.LEARNING_RATE, 
-#            epochs=NUM_EPOCHS, 
-#            layers='all',
-#            augmentation=augmentation)
-model.train(dataset_train, dataset_val, 
-            learning_rate=0.005, 
-            epochs=1, 
-            layers='heads',
-            augmentation=None)
-model.train(dataset_train, dataset_val, 
-            learning_rate=0.0005, 
-            epochs=1, 
-            layers='all',
-            augmentation=None)
-model.train(dataset_train, dataset_val, 
-            learning_rate=0.00001, 
-            epochs=NUM_EPOCHS, 
-            layers='all',
-            augmentation=augmentation)
 
 
-# In[ ]:
+# In[90]:
+
+
+get_ipython().run_cell_magic('time', '', "## train heads with higher lr to speedup the learning\nmodel.train(dataset_train, dataset_val,\n            learning_rate=LEARNING_RATE*2,\n            epochs=2,\n            layers='heads',\n            augmentation=None)  ## no need to augment yet\n\nhistory = model.keras_model.history.history")
+
+
+# In[91]:
+
+
+get_ipython().run_cell_magic('time', '', "model.train(dataset_train, dataset_val,\n            learning_rate=LEARNING_RATE,\n            epochs=NUM_EPOCHS,\n            layers='all',\n            augmentation=augmentation)\n\nnew_history = model.keras_model.history.history\nfor k in new_history: history[k] = history[k] + new_history[k]")
+
+
+# In[92]:
+
+
+epochs = range(1,len(next(iter(history.values())))+1)
+pd.DataFrame(history, index=epochs)
+
+
+# In[93]:
+
+
+plt.figure(figsize=(17,5))
+
+plt.subplot(131)
+plt.plot(epochs, history["loss"], label="Train loss")
+plt.plot(epochs, history["val_loss"], label="Valid loss")
+plt.legend()
+plt.subplot(132)
+plt.plot(epochs, history["mrcnn_class_loss"], label="Train class ce")
+plt.plot(epochs, history["val_mrcnn_class_loss"], label="Valid class ce")
+plt.legend()
+plt.subplot(133)
+plt.plot(epochs, history["mrcnn_bbox_loss"], label="Train box loss")
+plt.plot(epochs, history["val_mrcnn_bbox_loss"], label="Valid box loss")
+plt.legend()
+
+plt.show()
+
+
+# In[94]:
+
+
+best_epoch = np.argmin(history["val_loss"])
+print("Best Epoch:", best_epoch + 1, history["val_loss"][best_epoch])
+
+
+# In[95]:
 
 
 # select trained model 
@@ -433,16 +464,15 @@ for d in dir_names:
     checkpoints = sorted(checkpoints)
     if not checkpoints:
         print('No weight files in {}'.format(dir_name))
-    else: 
-      
-      checkpoint = os.path.join(dir_name, checkpoints[-1])
-      fps.append(checkpoint)
+    else:
+        checkpoint = os.path.join(dir_name, checkpoints[-1])
+        fps.append(checkpoint)
 
 model_path = sorted(fps)[-1]
 print('Found model {}'.format(model_path))
 
 
-# In[ ]:
+# In[96]:
 
 
 class InferenceConfig(DetectorConfig):
@@ -456,15 +486,14 @@ model = modellib.MaskRCNN(mode='inference',
                           config=inference_config,
                           model_dir=ROOT_DIR)
 
-
 # Load trained weights (fill in path to trained weights here)
 assert model_path != "", "Provide path to trained weights"
 print("Loading weights from ", model_path)
 model.load_weights(model_path, by_name=True)
 
 
-# In[ ]:
-'''
+# In[97]:
+
 
 # set color for class
 def get_colors_for_class_ids(class_ids):
@@ -479,18 +508,17 @@ def get_colors_for_class_ids(class_ids):
 # 
 # Note that we trained only one epoch for **demonstration purposes ONLY**. You might be able to improve performance running more epochs. 
 
-# In[ ]:
+# In[98]:
 
 
 # Show few example of ground truth vs. predictions on the validation dataset 
 dataset = dataset_val
 fig = plt.figure(figsize=(10, 30))
 
-for i in range(4):
-
+for i in range(6):
     image_id = random.choice(dataset.image_ids)
     
-    original_image, image_meta, gt_class_id, gt_bbox, gt_mask =        modellib.load_image_gt(dataset_val, inference_config, 
+    original_image, image_meta, gt_class_id, gt_bbox, gt_mask =         modellib.load_image_gt(dataset_val, inference_config, 
                                image_id, use_mini_mask=False)
     
     print(original_image.shape)
@@ -505,9 +533,10 @@ for i in range(4):
     visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], 
                                 dataset.class_names, r['scores'], 
                                 colors=get_colors_for_class_ids(r['class_ids']), ax=fig.axes[-1])
+    
 
 
-# In[ ]:
+# In[99]:
 
 
 # Get filenames of test dataset DICOM images
@@ -516,87 +545,77 @@ test_image_fps = get_dicom_fps(test_dicom_dir)
 
 # ### Final steps - Create the submission file
 
-# In[ ]:
+# In[100]:
 
 
-# Make predictions on test images, write out sample submission 
-def predict(image_fps, filepath='submission.csv', min_conf=0.95): 
-    
+# Make predictions on test images, write out sample submission
+def predict(image_fps, filepath='submission.csv', min_conf=0.98):
     # assume square image
     resize_factor = ORIG_SIZE / config.IMAGE_SHAPE[0]
-    #resize_factor = ORIG_SIZE 
+    #resize_factor = ORIG_SIZE
     with open(filepath, 'w') as file:
-      for image_id in tqdm(image_fps): 
-        ds = pydicom.read_file(image_id)
-        image = ds.pixel_array
-        # If grayscale. Convert to RGB for consistency.
-        if len(image.shape) != 3 or image.shape[2] != 3:
-            image = np.stack((image,) * 3, -1) 
-        image, window, scale, padding, crop = utils.resize_image(
-            image,
-            min_dim=config.IMAGE_MIN_DIM,
-            min_scale=config.IMAGE_MIN_SCALE,
-            max_dim=config.IMAGE_MAX_DIM,
-            mode=config.IMAGE_RESIZE_MODE)
-            
-        patient_id = os.path.splitext(os.path.basename(image_id))[0]
+        file.write("patientId,PredictionString\n")
 
-        results = model.detect([image])
-        r = results[0]
+        for image_id in tqdm(image_fps):
+            ds = pydicom.read_file(image_id)
+            image = ds.pixel_array
+            # If grayscale. Convert to RGB for consistency.
+            if len(image.shape) != 3 or image.shape[2] != 3:
+                image = np.stack((image,) * 3, -1)
+            image, window, scale, padding, crop = utils.resize_image(
+                image,
+                min_dim=config.IMAGE_MIN_DIM,
+                min_scale=config.IMAGE_MIN_SCALE,
+                max_dim=config.IMAGE_MAX_DIM,
+                mode=config.IMAGE_RESIZE_MODE)
 
-        out_str = ""
-        out_str += patient_id 
-        out_str += ","
-        assert( len(r['rois']) == len(r['class_ids']) == len(r['scores']) )
-        if len(r['rois']) == 0: 
-            pass
-        else: 
-            num_instances = len(r['rois'])
-  
-            for i in range(num_instances): 
-                if r['scores'][i] > min_conf: 
-                    out_str += ' '
-                    out_str += str(round(r['scores'][i], 2))
-                    out_str += ' '
+            patient_id = os.path.splitext(os.path.basename(image_id))[0]
 
-                    # x1, y1, width, height 
-                    x1 = r['rois'][i][1]
-                    y1 = r['rois'][i][0]
-                    width = r['rois'][i][3] - x1 
-                    height = r['rois'][i][2] - y1 
-                    bboxes_str = "{} {} {} {}".format(x1*resize_factor, y1*resize_factor,                                                        width*resize_factor, height*resize_factor)   
-#                     bboxes_str = "{} {} {} {}".format(x1, y1, \
-#                                                       width, height)
-                    out_str += bboxes_str
+            results = model.detect([image])
+            r = results[0]
 
-        file.write(out_str+"\n")
+            out_str = ""
+            out_str += patient_id
+            out_str += ","
+            assert( len(r['rois']) == len(r['class_ids']) == len(r['scores']) )
+            if len(r['rois']) == 0:
+                pass
+            else:
+                num_instances = len(r['rois'])
 
+                for i in range(num_instances):
+                    if r['scores'][i] > min_conf:
+                        out_str += ' '
+                        out_str += str(round(r['scores'][i], 2))
+                        out_str += ' '
 
-# In[ ]:
+                        # x1, y1, width, height
+                        x1 = r['rois'][i][1]
+                        y1 = r['rois'][i][0]
+                        width = r['rois'][i][3] - x1
+                        height = r['rois'][i][2] - y1
+                        bboxes_str = "{} {} {} {}".format(x1*resize_factor, y1*resize_factor,                                                            width*resize_factor, height*resize_factor)
+                        out_str += bboxes_str
+
+            file.write(out_str+"\n")
 
 
-# predict only the first 50 entries
+# In[101]:
+
+
 submission_fp = os.path.join(ROOT_DIR, 'submission.csv')
-print(submission_fp)
 predict(test_image_fps, filepath=submission_fp)
+print(submission_fp)
 
 
-# In[ ]:
+# In[102]:
 
 
 output = pd.read_csv(submission_fp, names=['patientId', 'PredictionString'])
-output.head(100)
+output.head(60)
 
 
-# In[ ]:
-
-
-## show submission.csv content
-#os.chdir(ROOT_DIR)
-#get_ipython().system('cat submission.csv')
-
-
-# In[ ]:
+# In[103]:
 
 
 # show a few test image detection example
@@ -639,12 +658,7 @@ def visualize():
     plt.imshow(image, cmap=plt.cm.gist_gray)
 
 visualize()
+visualize()
+visualize()
+visualize()
 
-
-# In[ ]:
-
-
-# remove files to allow committing (hit files limit otherwise)
-#get_ipython().system('rm -rf /kaggle/working/Mask_RCNN')
-
-'''
